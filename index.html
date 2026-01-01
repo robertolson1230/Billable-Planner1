@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billable Hours & Workload Planner</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+            --bg-tertiary: #E9ECEF;
+            --accent-primary: #0078C8;
+            --accent-secondary: #F58220;
+            --accent-warning: #FDB913;
+            --accent-danger: #DC3545;
+            --accent-success: #28A745;
+            --text-primary: #1A2B4A;
+            --text-secondary: #495057;
+            --text-muted: #6C757D;
+            --border: #DEE2E6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 245, 212, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 187, 249, 0.08) 0%, transparent 50%);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1A2B4A 0%, #0078C8 100%);
+            border-bottom: none;
+            padding: 2rem 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'Inter', monospace;
+            color: var(--accent-primary);
+            line-height: 1;
+        }
+
+        .stat-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+
+        .stat-meta {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 120, 200, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .month-name {
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-ahead {
+            background: rgba(0, 245, 212, 0.2);
+            color: var(--accent-primary);
+        }
+
+        .status-behind {
+            background: rgba(241, 91, 181, 0.2);
+            color: var(--accent-danger);
+        }
+
+        .status-ontrack {
+            background: rgba(254, 228, 64, 0.2);
+            color: var(--accent-warning);
+        }
+
+        .time-off-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .time-off-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .time-off-item {
+                grid-template-columns: 1fr auto;
+            }
+        }
+
+        .time-off-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(4px);
+        }
+
+        .time-off-date {
+            font-family: 'Inter', monospace;
+            font-weight: 700;
+            color: var(--accent-secondary);
+            font-size: 0.9rem;
+        }
+
+        .time-off-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .type-holiday {
+            background: rgba(0, 120, 200, 0.15);
+            color: var(--accent-primary);
+            border: 1px solid rgba(0, 120, 200, 0.3);
+        }
+
+        .type-vacation {
+            background: rgba(245, 130, 32, 0.15);
+            color: var(--accent-secondary);
+            border: 1px solid rgba(245, 130, 32, 0.3);
+        }
+
+        .type-navy {
+            background: rgba(253, 185, 19, 0.15);
+            color: var(--accent-warning);
+            border: 1px solid rgba(253, 185, 19, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 245, 212, 0.1);
+        }
+
+        .delete-btn {
+            background: var(--accent-danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(241, 91, 181, 0.3);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 26, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-primary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .time-off-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- PWA / iOS home-screen support -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0078C8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Billable Planner">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function PTOPlanner() {
+            const currentYear = 2026;
+            const [annualTarget, setAnnualTarget] = useState(1920);
+            const [showModal, setShowModal] = useState(false);
+            const [showTargetModal, setShowTargetModal] = useState(false);
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [editingEntry, setEditingEntry] = useState(null);
+            const [settingsLocked, setSettingsLocked] = useState(() => {
+                const saved = localStorage.getItem('settingsLocked');
+                return saved ? JSON.parse(saved) : false;
+            });
+            const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
+
+            const [monthlyHours, setMonthlyHours] = useState(() => {
+                const saved = localStorage.getItem('monthlyHours');
+                return saved ? JSON.parse(saved) : [
+                    { month: 'Jan', required: 160, actual: 0 },
+                    { month: 'Feb', required: 160, actual: 0 },
+                    { month: 'Mar', required: 160, actual: 0 },
+                    { month: 'Apr', required: 160, actual: 0 },
+                    { month: 'May', required: 160, actual: 0 },
+                    { month: 'Jun', required: 160, actual: 0 },
+                    { month: 'Jul', required: 160, actual: 0 },
+                    { month: 'Aug', required: 160, actual: 0 },
+                    { month: 'Sep', required: 160, actual: 0 },
+                    { month: 'Oct', required: 160, actual: 0 },
+                    { month: 'Nov', required: 160, actual: 0 },
+                    { month: 'Dec', required: 160, actual: 0 }
+                ];
+            });
+
+            // Separate state for scenario planning
+            const [scenarioTargets, setScenarioTargets] = useState(null);
+            
+            // Active monthly plan (separate from Settings baseline)
+            const [activePlan, setActivePlan] = useState(() => {
+                const saved = localStorage.getItem('activePlan');
+                return saved ? JSON.parse(saved) : null;
+            });
+
+            const [timeOffEntries, setTimeOffEntries] = useState(() => {
+                const saved = localStorage.getItem('timeOffEntries');
+                return saved ? JSON.parse(saved) : [
+                    { id: 1, startDate: '2026-01-01', endDate: '2026-01-01', type: 'Holiday', reason: "New Year's Day", hoursPerDay: 8 },
+                    { id: 2, startDate: '2026-01-19', endDate: '2026-01-19', type: 'Holiday', reason: 'Martin Luther King Jr Day', hoursPerDay: 8 },
+                    { id: 3, startDate: '2026-02-16', endDate: '2026-02-16', type: 'Holiday', reason: "President's Day", hoursPerDay: 8 },
+                    { id: 4, startDate: '2026-05-25', endDate: '2026-05-25', type: 'Holiday', reason: 'Memorial Day', hoursPerDay: 8 },
+                    { id: 5, startDate: '2026-07-03', endDate: '2026-07-03', type: 'Holiday', reason: 'Independence Day (observed)', hoursPerDay: 8 },
+                    { id: 6, startDate: '2026-09-07', endDate: '2026-09-07', type: 'Holiday', reason: 'Labor Day', hoursPerDay: 8 },
+                    { id: 7, startDate: '2026-11-26', endDate: '2026-11-26', type: 'Holiday', reason: 'Thanksgiving', hoursPerDay: 8 },
+                    { id: 8, startDate: '2026-11-27', endDate: '2026-11-27', type: 'Holiday', reason: 'Day after Thanksgiving', hoursPerDay: 8 },
+                    { id: 9, startDate: '2026-12-25', endDate: '2026-12-25', type: 'Holiday', reason: 'Christmas Day', hoursPerDay: 8 },
+                    { id: 10, startDate: '2026-02-18', endDate: '2026-02-22', type: 'Navy', reason: 'NTCE1', hoursPerDay: 8 },
+                    { id: 11, startDate: '2026-06-26', endDate: '2026-07-05', type: 'Vacation', reason: 'Cruise', hoursPerDay: 8 },
+                    { id: 12, startDate: '2026-06-10', endDate: '2026-06-14', type: 'Vacation', reason: 'Family reunion', hoursPerDay: 8 },
+                ];
+            });
+
+            const [newEntry, setNewEntry] = useState({
+                startDate: '',
+                endDate: '',
+                type: 'Vacation',
+                reason: '',
+                hoursPerDay: 8
+            });
+
+            const [monthlyData, setMonthlyData] = useState([]);
+
+            const calculateDays = (start, end) => {
+                const startDate = new Date(start);
+                const endDate = new Date(end);
+                const diffTime = Math.abs(endDate - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                return diffDays;
+            };
+
+            const formatDate = (dateString) => {
+                const [year, month, day] = dateString.split('-');
+                return `${month}/${day}/${year}`;
+            };
+
+            const getWorkingDays = (year, month) => {
+                const date = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                let workingDays = 0;
+
+                for (let day = 1; day <= lastDay; day++) {
+                    const currentDate = new Date(year, month, day);
+                    const dayOfWeek = currentDate.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        workingDays++;
+                    }
+                }
+                return workingDays;
+            };
+
+            const getTimeOffHoursForMonth = (monthIndex) => {
+                let totalHours = 0;
+                timeOffEntries.forEach(entry => {
+                    const start = new Date(entry.startDate);
+                    const end = new Date(entry.endDate);
+                    
+                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                        if (d.getMonth() === monthIndex && d.getFullYear() === currentYear) {
+                            totalHours += entry.hoursPerDay;
+                        }
+                    }
+                });
+                return totalHours;
+            };
+
+            useEffect(() => {
+                const data = monthlyHours.map((m, index) => {
+                    const workingDays = getWorkingDays(currentYear, index);
+                    const timeOffHours = getTimeOffHoursForMonth(index);
+                    const timeOffDays = timeOffHours / 8;
+                    // Use active plan if available, otherwise use settings
+                    const billableTarget = activePlan ? activePlan[index] : m.required;
+                    const adjustedWorkingDays = workingDays - timeOffDays;
+                    const dailyPace = adjustedWorkingDays > 0 ? billableTarget / adjustedWorkingDays : 0;
+                    
+                    // Calculate cumulative values using active plan or settings
+                    const targets = activePlan || monthlyHours.map(m => m.required);
+                    const cumulativeTarget = targets.slice(0, index + 1).reduce((sum, target) => sum + target, 0);
+                    const cumulativeActual = monthlyHours.slice(0, index + 1).reduce((sum, month) => sum + month.actual, 0);
+                    const variance = cumulativeActual - cumulativeTarget;
+
+                    return {
+                        month: m.month,
+                        billableTarget,
+                        actualHours: m.actual,
+                        timeOffHours,
+                        dailyPace,
+                        workingDays,
+                        required: m.required,
+                        cumulativeTarget,
+                        cumulativeActual,
+                        variance
+                    };
+                });
+
+                setMonthlyData(data);
+            }, [timeOffEntries, monthlyHours, activePlan]);
+
+            // Save to localStorage whenever data changes
+            useEffect(() => {
+                localStorage.setItem('monthlyHours', JSON.stringify(monthlyHours));
+            }, [monthlyHours]);
+
+            useEffect(() => {
+                localStorage.setItem('timeOffEntries', JSON.stringify(timeOffEntries));
+            }, [timeOffEntries]);
+
+            useEffect(() => {
+                localStorage.setItem('settingsLocked', JSON.stringify(settingsLocked));
+            }, [settingsLocked]);
+
+            useEffect(() => {
+                if (activePlan) {
+                    localStorage.setItem('activePlan', JSON.stringify(activePlan));
+                }
+            }, [activePlan]);
+
+            const totalBillableTarget = monthlyData.reduce((sum, m) => sum + m.billableTarget, 0);
+            const totalActualHours = monthlyData.reduce((sum, m) => sum + m.actualHours, 0);
+            const totalTimeOff = monthlyData.reduce((sum, m) => sum + m.timeOffHours, 0);
+            const totalTimeOffDays = totalTimeOff / 8;
+            const averageDailyPace = monthlyData.length > 0 
+                ? monthlyData.reduce((sum, m) => sum + m.dailyPace, 0) / monthlyData.length 
+                : 0;
+            const overallVariance = totalActualHours - totalBillableTarget;
+            
+            // Bonus calculations
+            // Bonus calculation - prorated based on annual target
+            const getBonusTier = (hours) => {
+                // Use Settings tab total (not active plan) for bonus proration
+                const settingsAnnualTarget = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                
+                // Prorate first bonus threshold based on annual target
+                // Full-time (1920) = 2000 bonus threshold
+                // Formula: firstBonus = (settingsAnnualTarget / 1920) * 2000
+                const firstBonusThreshold = Math.round((settingsAnnualTarget / 1920) * 2000);
+                
+                if (hours < firstBonusThreshold) {
+                    return { 
+                        tier: 'None', 
+                        nextBonus: firstBonusThreshold, 
+                        hoursToNext: firstBonusThreshold - hours 
+                    };
+                }
+                
+                // After first bonus, each additional bonus is every 100 hours
+                const bonusCount = Math.floor((hours - firstBonusThreshold) / 100) + 1;
+                const nextBonusAt = firstBonusThreshold + (bonusCount * 100);
+                
+                return { 
+                    tier: bonusCount, 
+                    nextBonus: nextBonusAt, 
+                    hoursToNext: nextBonusAt - hours,
+                    firstThreshold: firstBonusThreshold
+                };
+            };
+            
+            const currentBonus = getBonusTier(totalActualHours);
+            const projectedBonus = getBonusTier(totalBillableTarget);
+            
+            // Mid-year milestone (as of June 30)
+            const midYearTarget = monthlyData.slice(0, 6).reduce((sum, m) => sum + m.billableTarget, 0);
+            const midYearActual = monthlyData.slice(0, 6).reduce((sum, m) => sum + m.actualHours, 0);
+            const midYearVariance = midYearActual - midYearTarget;
+
+            const addTimeOffEntry = () => {
+                if (newEntry.startDate && newEntry.endDate && newEntry.reason) {
+                    if (editingEntry) {
+                        // Update existing entry
+                        setTimeOffEntries(timeOffEntries.map(e => 
+                            e.id === editingEntry.id ? { ...newEntry, id: editingEntry.id } : e
+                        ));
+                        setEditingEntry(null);
+                    } else {
+                        // Add new entry
+                        const entry = {
+                            id: Date.now(),
+                            ...newEntry
+                        };
+                        setTimeOffEntries([...timeOffEntries, entry]);
+                    }
+                    setNewEntry({
+                        startDate: '',
+                        endDate: '',
+                        type: 'Vacation',
+                        reason: '',
+                        hoursPerDay: 8
+                    });
+                    setShowModal(false);
+                }
+            };
+
+            const editEntry = (entry) => {
+                setNewEntry({
+                    startDate: entry.startDate,
+                    endDate: entry.endDate,
+                    type: entry.type,
+                    reason: entry.reason,
+                    hoursPerDay: entry.hoursPerDay
+                });
+                setEditingEntry(entry);
+                setShowModal(true);
+            };
+
+            const deleteEntry = (id) => {
+                setTimeOffEntries(timeOffEntries.filter(e => e.id !== id));
+            };
+
+            const updateMonthlyTarget = (monthIndex, newValue) => {
+                const updated = [...monthlyHours];
+                updated[monthIndex].required = parseFloat(newValue) || 0;
+                setMonthlyHours(updated);
+                // Update annual target to match sum of monthly targets
+                const newAnnualTotal = updated.reduce((sum, m) => sum + m.required, 0);
+                setAnnualTarget(newAnnualTotal);
+            };
+
+            const updateScenarioTarget = (monthIndex, newValue) => {
+                // Initialize scenario targets if not set
+                if (!scenarioTargets) {
+                    // Use active plan if available, otherwise use settings
+                    const baseline = activePlan || monthlyHours.map(m => m.required);
+                    setScenarioTargets(baseline);
+                }
+                const updated = scenarioTargets ? [...scenarioTargets] : (activePlan || monthlyHours.map(m => m.required));
+                updated[monthIndex] = parseFloat(newValue) || 0;
+                setScenarioTargets(updated);
+            };
+
+            const resetScenario = () => {
+                setScenarioTargets(null);
+            };
+
+            const applyScenarioToTracking = () => {
+                if (scenarioTargets) {
+                    // Save scenario as the active plan for progress tracking
+                    setActivePlan(scenarioTargets);
+                    setScenarioTargets(null);
+                }
+            };
+
+            const getWeekendCount = (year, month) => {
+                const date = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                let weekendDays = 0;
+
+                for (let day = 1; day <= lastDay; day++) {
+                    const currentDate = new Date(year, month, day);
+                    const dayOfWeek = currentDate.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        weekendDays++;
+                    }
+                }
+                return weekendDays;
+            };
+
+            const updateActualHours = (monthIndex, newValue) => {
+                const updated = [...monthlyHours];
+                updated[monthIndex].actual = parseFloat(newValue) || 0;
+                setMonthlyHours(updated);
+            };
+
+            const updateAnnualTarget = (newTarget) => {
+                setAnnualTarget(parseFloat(newTarget) || 1920);
+            };
+
+            const applyPreset = (preset) => {
+                const presets = {
+                    standard: 1920,
+                    '2000': 2000,
+                    '2100': 2100,
+                    '2200': 2200
+                };
+                const targetHours = presets[preset] || 1920;
+                const monthlyAverage = Math.round(targetHours / 12);
+                
+                // Distribute evenly across all months, preserve actual hours
+                const updated = monthlyHours.map(m => ({
+                    ...m,
+                    required: monthlyAverage
+                }));
+                
+                setMonthlyHours(updated);
+                setAnnualTarget(targetHours);
+            };
+
+            const getStatusBadge = (pace) => {
+                if (pace < 7) return { label: 'Light', class: 'status-ahead' };
+                if (pace < 9) return { label: 'On Track', class: 'status-ontrack' };
+                return { label: 'Heavy', class: 'status-behind' };
+            };
+
+            return (
+                <div className="app-container">
+                    <header className="header">
+                        <div className="header-content">
+                            <h1>Billable Hours & Workload Planner</h1>
+                            <p className="subtitle">Track billable hours, manage time off, and plan your workload for 2026</p>
+                            <p style={{ 
+                                fontSize: '0.85rem', 
+                                color: 'var(--text-muted)', 
+                                marginTop: '0.5rem',
+                                fontWeight: '500'
+                            }}>
+                                Created by Robert Olson | December 2025
+                            </p>
+                        </div>
+                    </header>
+
+                    <div className="main-content">
+                        <div className="tabs">
+                            <button 
+                                className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('dashboard')}
+                            >
+                                Dashboard
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'schedule' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('schedule')}
+                            >
+                                Time Off Schedule
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'monthly' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('monthly')}
+                            >
+                                Monthly Planning
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'progress' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('progress')}
+                            >
+                                Progress Tracking
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('settings')}
+                            >
+                                Settings
+                            </button>
+                        </div>
+
+                        {activeTab === 'dashboard' && (
+                            <>
+                                {/* Current Glide Slope Status - Top Priority */}
+                                {(() => {
+                                    const currentMonth = new Date().getMonth(); // 0-11 (Jan=0, Dec=11)
+                                    const currentMonthData = monthlyData[currentMonth];
+                                    if (!currentMonthData) return null;
+                                    
+                                    const variance = currentMonthData.variance;
+                                    const isAhead = variance >= 0;
+                                    const isBehind = variance < 0;
+                                    
+                                    // Calculate catch-up pace if behind
+                                    const remainingMonths = 12 - (currentMonth + 1);
+                                    const targets = activePlan || monthlyHours.map(m => m.required);
+                                    const remainingTarget = targets.slice(currentMonth + 1).reduce((sum, t) => sum + t, 0);
+                                    const catchUpHours = isBehind ? Math.abs(variance) : 0;
+                                    const totalRemainingNeeded = remainingTarget + catchUpHours;
+                                    const remainingDays = monthlyData.slice(currentMonth + 1).reduce((sum, m) => {
+                                        const timeOffDays = m.timeOffHours / 8;
+                                        const availableDays = m.workingDays - timeOffDays;
+                                        return sum + availableDays;
+                                    }, 0);
+                                    const catchUpPace = remainingDays > 0 ? totalRemainingNeeded / remainingDays : 0;
+                                    
+                                    return (
+                                        <div style={{ 
+                                            marginBottom: '2rem',
+                                            padding: '2rem',
+                                            background: isAhead 
+                                                ? 'linear-gradient(135deg, rgba(0, 120, 200, 0.1), rgba(40, 167, 69, 0.1))' 
+                                                : 'linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(253, 185, 19, 0.1))',
+                                            border: `3px solid ${isAhead ? 'var(--accent-primary)' : 'var(--accent-danger)'}`,
+                                            borderRadius: '16px',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        Current Glide Slope Status ({currentMonthData.month} Year-to-Date)
+                                                    </div>
+                                                    <div style={{ fontSize: '3rem', fontWeight: '800', color: isAhead ? 'var(--accent-primary)' : 'var(--accent-danger)', lineHeight: '1' }}>
+                                                        {isAhead ? '✓ ON TRACK' : '⚠ BEHIND'}
+                                                    </div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                        Variance
+                                                    </div>
+                                                    <div style={{ fontSize: '2.5rem', fontWeight: '700', fontFamily: 'Inter, monospace', color: isAhead ? 'var(--accent-primary)' : 'var(--accent-danger)' }}>
+                                                        {variance >= 0 ? '+' : ''}{variance.toFixed(0)}
+                                                    </div>
+                                                    <div style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+                                                        hours {isAhead ? 'ahead' : 'behind'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ 
+                                                display: 'grid', 
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                                                gap: '1.5rem',
+                                                padding: '1.5rem',
+                                                background: 'var(--bg-primary)',
+                                                borderRadius: '12px'
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                        Target Through {currentMonthData.month}
+                                                    </div>
+                                                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                        {currentMonthData.cumulativeTarget} hrs
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                        Actual Through {currentMonthData.month}
+                                                    </div>
+                                                    <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                                                        {currentMonthData.cumulativeActual} hrs
+                                                    </div>
+                                                </div>
+                                                {isBehind && (
+                                                    <>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                                Catch-Up Needed
+                                                            </div>
+                                                            <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--accent-danger)' }}>
+                                                                {catchUpHours.toFixed(0)} hrs
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                                Required Daily Pace (Remaining {remainingMonths} months)
+                                                            </div>
+                                                            <div style={{ fontSize: '1.8rem', fontWeight: '700', color: catchUpPace > 8.6 ? 'var(--accent-danger)' : 'var(--accent-warning)' }}>
+                                                                {catchUpPace.toFixed(1)} hrs/day
+                                                            </div>
+                                                            {catchUpPace > 8.6 && (
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', marginTop: '0.25rem', fontWeight: '600' }}>
+                                                                    ⚠️ Weekend work required
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+                                                {isAhead && (
+                                                    <div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                            Cushion Built
+                                                        </div>
+                                                        <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--accent-success)' }}>
+                                                            +{variance.toFixed(0)} hrs
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                            Keep up the great work!
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div className="stats-grid">
+                                    <div className="stat-card">
+                                        <div className="stat-label">Minimum Target (1920)</div>
+                                        <div className="stat-value">
+                                            {totalActualHours}
+                                            <span className="stat-unit">/ 1920 hrs</span>
+                                        </div>
+                                        <div className="stat-meta">
+                                            {totalActualHours >= 1920 ? (
+                                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>
+                                                    ✓ Minimum Met! (+{(totalActualHours - 1920).toFixed(0)} hrs)
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--accent-danger)', fontWeight: '700' }}>
+                                                    ↓ {(1920 - totalActualHours).toFixed(0)} hrs to minimum
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="stat-card">
+                                        <div className="stat-label">Bonus Progress</div>
+                                        <div className="stat-value">
+                                            {currentBonus.tier === 'None' ? (
+                                                <>0<span className="stat-unit">bonuses</span></>
+                                            ) : (
+                                                <>
+                                                    {currentBonus.tier}
+                                                    <span className="stat-unit">{currentBonus.tier === 1 ? 'bonus' : 'bonuses'}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="stat-meta">
+                                            {currentBonus.tier === 'None' ? (
+                                                <span style={{ color: 'var(--text-secondary)' }}>
+                                                    {currentBonus.hoursToNext.toFixed(0)} hrs to first bonus ({currentBonus.nextBonus})
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>
+                                                    {currentBonus.hoursToNext.toFixed(0)} hrs to next bonus ({currentBonus.nextBonus})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="stat-card">
+                                        <div className="stat-label">Mid-Year Checkpoint (July 1)</div>
+                                        <div className="stat-value">
+                                            {midYearActual}
+                                            <span className="stat-unit">/ {midYearTarget} hrs</span>
+                                        </div>
+                                        <div className="stat-meta">
+                                            {midYearVariance >= 0 ? (
+                                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>
+                                                    ✓ On track (+{midYearVariance.toFixed(0)} hrs)
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--accent-danger)', fontWeight: '700' }}>
+                                                    ⚠ Behind by {Math.abs(midYearVariance).toFixed(0)} hrs
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="stat-card">
+                                        <div className="stat-label">Full Year Target</div>
+                                        <div className="stat-value">
+                                            {totalActualHours}
+                                            <span className="stat-unit">/ {totalBillableTarget} hrs</span>
+                                        </div>
+                                        <div className="stat-meta">
+                                            {overallVariance >= 0 ? (
+                                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>
+                                                    ↑ {Math.abs(overallVariance).toFixed(0)} hrs ahead
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: 'var(--accent-danger)', fontWeight: '700' }}>
+                                                    ↓ {Math.abs(overallVariance).toFixed(0)} hrs behind
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2>Bonus Tracker</h2>
+                                    </div>
+                                    {(() => {
+                                        const settingsAnnualTarget = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                        const firstBonusThreshold = currentBonus.firstThreshold || Math.round((settingsAnnualTarget / 1920) * 2000);
+                                        
+                                        return (
+                                            <>
+                                                {settingsAnnualTarget < 1920 && (
+                                                    <div style={{ 
+                                                        marginBottom: '1rem', 
+                                                        padding: '0.75rem 1rem', 
+                                                        background: 'rgba(0, 120, 200, 0.1)',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.85rem',
+                                                        color: 'var(--text-secondary)'
+                                                    }}>
+                                                        💡 <strong>Prorated Bonuses:</strong> First bonus at {firstBonusThreshold} hrs (prorated from {settingsAnnualTarget} hr annual target)
+                                                    </div>
+                                                )}
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                            Progress to next bonus
+                                                        </span>
+                                                        <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
+                                                            {totalActualHours} / {currentBonus.nextBonus} hrs
+                                                        </span>
+                                                    </div>
+                                                    <div className="progress-bar" style={{ height: '12px' }}>
+                                                        <div 
+                                                            className="progress-fill" 
+                                                            style={{ 
+                                                                width: `${Math.min(100, (totalActualHours / currentBonus.nextBonus) * 100)}%` 
+                                                            }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                                                    {[
+                                                        firstBonusThreshold,
+                                                        firstBonusThreshold + 100,
+                                                        firstBonusThreshold + 200,
+                                                        firstBonusThreshold + 300,
+                                                        firstBonusThreshold + 400,
+                                                        firstBonusThreshold + 500
+                                                    ].map((tier, index) => (
+                                                        <div 
+                                                            key={tier}
+                                                            style={{ 
+                                                                padding: '1rem',
+                                                                background: totalActualHours >= tier ? 'rgba(0, 120, 200, 0.15)' : 'var(--bg-tertiary)',
+                                                                border: totalActualHours >= tier ? '2px solid var(--accent-primary)' : '1px solid var(--border)',
+                                                                borderRadius: '10px',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        >
+                                                            <div style={{ fontSize: '1.2rem', fontWeight: '700', color: totalActualHours >= tier ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                                                                Bonus {index + 1}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                                {tier} hrs
+                                                            </div>
+                                                            {totalActualHours >= tier && (
+                                                                <div style={{ marginTop: '0.5rem', color: 'var(--accent-primary)', fontSize: '1.5rem' }}>✓</div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2>Quick Stats</h2>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                        <div>
+                                            <div className="stat-label">Total Time Off</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-secondary)' }}>
+                                                {totalTimeOffDays.toFixed(1)} days
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                {totalTimeOff} hours scheduled
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="stat-label">Avg Daily Pace</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                                                {averageDailyPace.toFixed(1)} hrs/day
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="stat-label">Projected Bonuses</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-warning)' }}>
+                                                {projectedBonus.tier === 'None' ? 0 : projectedBonus.tier}
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                                Based on {totalBillableTarget} hr target
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="stat-label">Annual Progress</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                                                {totalBillableTarget > 0 ? ((totalActualHours / totalBillableTarget) * 100).toFixed(1) : 0}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === 'schedule' && (
+                            <div className="section">
+                                <div className="section-header">
+                                    <h2>Time Off Schedule</h2>
+                                    <button className="btn" onClick={() => setShowModal(true)}>
+                                        + Add Time Off
+                                    </button>
+                                </div>
+                                <div className="time-off-list">
+                                    {timeOffEntries.map(entry => (
+                                        <div key={entry.id} className="time-off-item">
+                                            <div className="time-off-date">
+                                                {formatDate(entry.startDate)} - {formatDate(entry.endDate)}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{entry.reason}</div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                    {calculateDays(entry.startDate, entry.endDate)} days · {calculateDays(entry.startDate, entry.endDate) * entry.hoursPerDay} hours · {entry.hoursPerDay} hrs/day
+                                                </div>
+                                            </div>
+                                            <span className={`time-off-type type-${entry.type.toLowerCase()}`}>
+                                                {entry.type}
+                                            </span>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }} onClick={() => editEntry(entry)}>
+                                                    Edit
+                                                </button>
+                                                <button className="delete-btn" onClick={() => deleteEntry(entry.id)}>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'monthly' && (
+                            <div className="section">
+                                <div className="section-header">
+                                    <h2>Monthly Planning & Daily Pace Calculator</h2>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {scenarioTargets && (
+                                            <>
+                                                <button className="btn-secondary" onClick={resetScenario} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                                    Reset to {activePlan ? 'Active Plan' : 'Settings'}
+                                                </button>
+                                                <button className="btn" onClick={applyScenarioToTracking} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                                    Set as Active Plan
+                                                </button>
+                                            </>
+                                        )}
+                                        {activePlan && !scenarioTargets && (
+                                            <div style={{ 
+                                                padding: '0.5rem 1rem', 
+                                                background: 'rgba(0, 245, 212, 0.15)',
+                                                borderRadius: '8px',
+                                                fontSize: '0.9rem',
+                                                color: 'var(--accent-primary)',
+                                                fontWeight: '600'
+                                            }}>
+                                                ✓ Active Plan in Use
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                    Experiment with monthly targets to balance your workload. Click "Set as Active Plan" to use for progress tracking. Settings remain protected.
+                                </p>
+                                
+                                {(() => {
+                                    const currentTargets = scenarioTargets || activePlan || monthlyHours.map(m => m.required);
+                                    const scenarioTotal = currentTargets.reduce((sum, t) => sum + t, 0);
+                                    const settingsTotal = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                    const annualShortfall = scenarioTotal - settingsTotal;
+                                    
+                                    // Only show warning if scenario total is BELOW settings total
+                                    // If individual months are below but total is equal/above, no warning (hours are redistributed)
+                                    if (scenarioTotal < settingsTotal && scenarioTargets !== null) {
+                                        return (
+                                            <div style={{ 
+                                                marginBottom: '1.5rem', 
+                                                padding: '1.5rem', 
+                                                background: 'rgba(241, 91, 181, 0.2)', 
+                                                border: '3px solid var(--accent-danger)',
+                                                borderRadius: '12px' 
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                                    <span style={{ fontSize: '2.5rem' }}>🚨</span>
+                                                    <div>
+                                                        <strong style={{ color: 'var(--accent-danger)', fontSize: '1.3rem', display: 'block' }}>
+                                                            BELOW ANNUAL MINIMUM
+                                                        </strong>
+                                                        <span style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '600' }}>
+                                                            You are {Math.abs(annualShortfall).toFixed(0)} hours SHORT of your {settingsTotal} hr annual target
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
+                                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                        <strong style={{ color: 'var(--text-primary)' }}>Current scenario total:</strong> {scenarioTotal} hrs
+                                                    </p>
+                                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                        <strong style={{ color: 'var(--text-primary)' }}>Required annual target:</strong> {settingsTotal} hrs
+                                                    </p>
+                                                    <p style={{ color: 'var(--accent-danger)', fontWeight: '700', fontSize: '1.05rem', marginTop: '0.75rem' }}>
+                                                        ⚠️ Increase monthly targets or reduce time off to meet minimum
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    // Show success message if total meets/exceeds target but has redistributed hours
+                                    if (scenarioTotal >= settingsTotal && scenarioTargets !== null) {
+                                        const hasRedistribution = currentTargets.some((t, i) => t !== monthlyHours[i].required);
+                                        if (hasRedistribution) {
+                                            return (
+                                                <div style={{ 
+                                                    marginBottom: '1.5rem', 
+                                                    padding: '1.25rem 1.5rem', 
+                                                    background: 'rgba(0, 245, 212, 0.15)', 
+                                                    border: '2px solid var(--accent-primary)',
+                                                    borderRadius: '12px' 
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <span style={{ fontSize: '1.5rem' }}>✅</span>
+                                                        <div>
+                                                            <strong style={{ color: 'var(--accent-primary)', fontSize: '1.1rem' }}>
+                                                                Annual Target Met
+                                                            </strong>
+                                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.25rem' }}>
+                                                                Total: {scenarioTotal} hrs (meets {settingsTotal} hr requirement). Hours redistributed across months to balance workload.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })()}
+                                
+                                {(() => {
+                                    const currentTargets = scenarioTargets || activePlan || monthlyHours.map(m => m.required);
+                                    const heavyMonths = monthlyData.map((m, i) => {
+                                        const target = currentTargets[i];
+                                        const timeOffDays = m.timeOffHours / 8;
+                                        const availableDays = m.workingDays - timeOffDays;
+                                        const dailyPace = availableDays > 0 ? target / availableDays : 0;
+                                        const weekendDays = getWeekendCount(currentYear, i);
+                                        const excessHoursPerDay = Math.max(0, dailyPace - 8.6);
+                                        const weekendHoursNeeded = excessHoursPerDay * availableDays;
+                                        
+                                        return {
+                                            month: m.month,
+                                            dailyPace,
+                                            weekendHoursNeeded,
+                                            weekendDays,
+                                            isHeavy: dailyPace > 8.6
+                                        };
+                                    }).filter(m => m.isHeavy);
+                                    
+                                    if (heavyMonths.length > 0) {
+                                        return (
+                                            <div style={{ 
+                                                marginBottom: '1.5rem', 
+                                                padding: '1rem 1.5rem', 
+                                                background: 'rgba(254, 228, 64, 0.15)', 
+                                                border: '2px solid var(--accent-warning)',
+                                                borderRadius: '12px' 
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                                    <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                                                    <strong style={{ color: 'var(--accent-warning)', fontSize: '1.1rem' }}>Weekend Work Required</strong>
+                                                </div>
+                                                {heavyMonths.map((m, idx) => (
+                                                    <div key={idx} style={{ 
+                                                        marginBottom: idx < heavyMonths.length - 1 ? '0.75rem' : '0',
+                                                        padding: '0.75rem',
+                                                        background: 'var(--bg-secondary)',
+                                                        borderRadius: '8px'
+                                                    }}>
+                                                        <div style={{ color: 'var(--text-primary)', fontWeight: '700', marginBottom: '0.25rem' }}>
+                                                            {m.month}: {m.dailyPace.toFixed(1)} hrs/day
+                                                        </div>
+                                                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                            Need to work <strong style={{ color: 'var(--accent-danger)' }}>{m.weekendHoursNeeded.toFixed(1)} weekend hours</strong> ({m.weekendDays} weekend days available)
+                                                        </div>
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                                                            Or reduce time off / lower monthly target to avoid weekend work
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                                
+                                <div className="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Month</th>
+                                                <th>Working Days</th>
+                                                <th>Time Off (Days)</th>
+                                                <th>Available Days</th>
+                                                <th>Scenario Target</th>
+                                                <th style={{ background: 'rgba(241, 91, 181, 0.1)' }}>⚠️ vs Annual Plan</th>
+                                                <th>Daily Pace Needed</th>
+                                                <th>Weekend Hours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {monthlyData.map((m, index) => {
+                                                const currentTargets = scenarioTargets || activePlan || monthlyHours.map(m => m.required);
+                                                const target = currentTargets[index];
+                                                const settingsTarget = monthlyHours[index].required;
+                                                const targetDiff = target - settingsTarget;
+                                                const timeOffDays = m.timeOffHours / 8;
+                                                const availableDays = m.workingDays - timeOffDays;
+                                                const dailyPaceNeeded = availableDays > 0 ? target / availableDays : 0;
+                                                const excessHoursPerDay = Math.max(0, dailyPaceNeeded - 8.6);
+                                                const weekendHoursNeeded = excessHoursPerDay * availableDays;
+                                                
+                                                // Check if annual total is on track
+                                                const scenarioTotal = currentTargets.reduce((sum, t) => sum + t, 0);
+                                                const settingsTotal = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                                const annualOnTrack = scenarioTotal >= settingsTotal;
+                                                
+                                                return (
+                                                    <tr key={index} style={{ background: targetDiff < 0 ? 'rgba(241, 91, 181, 0.05)' : 'transparent' }}>
+                                                        <td className="month-name">{m.month}</td>
+                                                        <td style={{ fontWeight: '600' }}>{m.workingDays}</td>
+                                                        <td style={{ color: timeOffDays > 0 ? 'var(--accent-warning)' : 'var(--text-secondary)' }}>
+                                                            {timeOffDays.toFixed(1)}
+                                                        </td>
+                                                        <td style={{ fontWeight: '700', color: 'var(--accent-secondary)' }}>
+                                                            {availableDays.toFixed(1)}
+                                                        </td>
+                                                        <td>
+                                                            <input 
+                                                                type="number"
+                                                                value={target}
+                                                                onChange={(e) => updateScenarioTarget(index, e.target.value)}
+                                                                min="0"
+                                                                step="1"
+                                                                style={{ 
+                                                                    width: '90px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: targetDiff < 0 ? '2px solid var(--accent-danger)' : '1px solid var(--border)',
+                                                                    color: 'var(--text-primary)',
+                                                                    padding: '0.5rem',
+                                                                    borderRadius: '6px',
+                                                                    fontWeight: '700'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ 
+                                                            fontFamily: 'Inter, monospace',
+                                                            fontWeight: '700',
+                                                            fontSize: '1.05rem',
+                                                            background: targetDiff < 0 ? 'rgba(241, 91, 181, 0.15)' : 'transparent',
+                                                            color: targetDiff < 0 ? 'var(--accent-danger)' : targetDiff > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                                                        }}>
+                                                            {targetDiff === 0 ? '—' : (
+                                                                <>
+                                                                    {/* Only show emoji if annual total is BELOW target */}
+                                                                    {targetDiff < 0 && !annualOnTrack && <span style={{ marginRight: '0.25rem' }}>🚨</span>}
+                                                                    {(targetDiff > 0 ? '+' : '') + targetDiff.toFixed(0)}
+                                                                </>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ 
+                                                            fontFamily: 'Inter, monospace', 
+                                                            fontWeight: '700',
+                                                            fontSize: '1.1rem',
+                                                            color: dailyPaceNeeded > 8.6 ? 'var(--accent-danger)' : 'var(--accent-primary)'
+                                                        }}>
+                                                            {dailyPaceNeeded.toFixed(1)} hrs/day
+                                                        </td>
+                                                        <td style={{ 
+                                                            fontFamily: 'Inter, monospace',
+                                                            fontWeight: '700',
+                                                            color: weekendHoursNeeded > 0 ? 'var(--accent-danger)' : 'var(--text-secondary)'
+                                                        }}>
+                                                            {weekendHoursNeeded > 0 ? `${weekendHoursNeeded.toFixed(1)} hrs` : '—'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            <tr style={{ borderTop: '2px solid var(--accent-primary)', fontWeight: '700', background: 'var(--bg-tertiary)' }}>
+                                                <td>TOTALS</td>
+                                                <td>{monthlyData.reduce((sum, m) => sum + m.workingDays, 0)}</td>
+                                                <td>{(monthlyData.reduce((sum, m) => sum + m.timeOffHours, 0) / 8).toFixed(1)}</td>
+                                                <td style={{ color: 'var(--accent-secondary)' }}>
+                                                    {monthlyData.reduce((sum, m) => sum + (m.workingDays - m.timeOffHours / 8), 0).toFixed(1)}
+                                                </td>
+                                                <td style={{ fontSize: '1.1rem', color: 'var(--accent-primary)' }}>
+                                                    {(scenarioTargets || monthlyHours.map(m => m.required)).reduce((sum, t) => sum + t, 0)} hrs
+                                                </td>
+                                                <td style={{ 
+                                                    fontFamily: 'Inter, monospace',
+                                                    fontSize: '1.2rem',
+                                                    background: (() => {
+                                                        const scenarioTotal = (scenarioTargets || monthlyHours.map(m => m.required)).reduce((sum, t) => sum + t, 0);
+                                                        const settingsTotal = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                                        const diff = scenarioTotal - settingsTotal;
+                                                        return diff < 0 ? 'rgba(241, 91, 181, 0.2)' : 'transparent';
+                                                    })(),
+                                                    color: (() => {
+                                                        const scenarioTotal = (scenarioTargets || monthlyHours.map(m => m.required)).reduce((sum, t) => sum + t, 0);
+                                                        const settingsTotal = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                                        const diff = scenarioTotal - settingsTotal;
+                                                        return diff < 0 ? 'var(--accent-danger)' : diff > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)';
+                                                    })()
+                                                }}>
+                                                    {(() => {
+                                                        const scenarioTotal = (scenarioTargets || monthlyHours.map(m => m.required)).reduce((sum, t) => sum + t, 0);
+                                                        const settingsTotal = monthlyHours.reduce((sum, m) => sum + m.required, 0);
+                                                        const diff = scenarioTotal - settingsTotal;
+                                                        if (diff === 0) return '—';
+                                                        return (
+                                                            <>
+                                                                {/* Only show emoji in total if annual is below */}
+                                                                {diff < 0 && <span style={{ marginRight: '0.25rem' }}>🚨</span>}
+                                                                {(diff > 0 ? '+' : '') + diff.toFixed(0)}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td style={{ 
+                                                    fontFamily: 'Inter, monospace',
+                                                    fontSize: '1.1rem',
+                                                    color: 'var(--accent-primary)'
+                                                }}>
+                                                    {(() => {
+                                                        const currentTargets = scenarioTargets || activePlan || monthlyHours.map(m => m.required);
+                                                        const avgPace = monthlyData.reduce((sum, m, i) => {
+                                                            const timeOffDays = m.timeOffHours / 8;
+                                                            const availableDays = m.workingDays - timeOffDays;
+                                                            return sum + (availableDays > 0 ? currentTargets[i] / availableDays : 0);
+                                                        }, 0) / monthlyData.length;
+                                                        return avgPace.toFixed(1);
+                                                    })()} avg
+                                                </td>
+                                                <td style={{ color: 'var(--text-muted)' }}>—</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ marginBottom: '1rem', color: 'var(--accent-primary)' }}>How This Works</h3>
+                                    <div style={{ display: 'grid', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Scenario Planning:</strong> Adjust targets here to experiment. Your Settings tab values remain unchanged until you click "Apply to Settings".
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--accent-danger)' }}>🚨 vs Annual Plan:</strong> RED numbers with warning icon mean you're below your required annual target from Settings. This puts you at risk of missing your minimum.
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Daily Pace (Tenths of Hours):</strong> Shown in 0.1 hour increments to align with 6-minute billing intervals (e.g., 8.5 hrs = 8 hours 30 minutes).
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>8.6 Hour Threshold:</strong> Daily pace above 8.6 hrs/day (red) means you'll need to work weekends.
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Weekend Hours:</strong> Shows total weekend hours needed to meet target if weekday pace exceeds 8.6 hrs/day.
+                                        </div>
+                                        <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                                            💡 <strong>Pro Tip:</strong> Keep all months at ≤ 8.6 hrs/day AND ensure annual total meets Settings target to avoid weekend work and hit your minimum.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'progress' && (
+                            <div className="section">
+                                <div className="section-header">
+                                    <h2>Progress Tracking & Glide Slope</h2>
+                                    {activePlan && (
+                                        <div style={{ 
+                                            padding: '0.5rem 1rem', 
+                                            background: 'rgba(0, 120, 200, 0.15)',
+                                            borderRadius: '8px',
+                                            fontSize: '0.9rem',
+                                            color: 'var(--accent-primary)',
+                                            fontWeight: '600',
+                                            border: '1px solid rgba(0, 120, 200, 0.3)'
+                                        }}>
+                                            ✓ Using Active Plan (not Settings baseline)
+                                        </div>
+                                    )}
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                    Track your cumulative progress throughout the year. Enter actual hours billed each month to see if you're ahead or behind the glide slope.
+                                </p>
+                                <div className="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Month</th>
+                                                <th>Monthly Target</th>
+                                                <th>Actual Hours</th>
+                                                <th>Cumulative Target</th>
+                                                <th>Cumulative Actual</th>
+                                                <th>Variance (Glide Slope)</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {monthlyData.map((m, index) => {
+                                                return (
+                                                    <tr key={index}>
+                                                        <td className="month-name">{m.month}</td>
+                                                        <td>{m.billableTarget} hrs</td>
+                                                        <td>
+                                                            <input 
+                                                                type="number"
+                                                                value={m.actualHours}
+                                                                onChange={(e) => updateActualHours(index, e.target.value)}
+                                                                min="0"
+                                                                step="0.1"
+                                                                placeholder="0"
+                                                                style={{ 
+                                                                    width: '100px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: '1px solid var(--border)',
+                                                                    color: 'var(--text-primary)',
+                                                                    padding: '0.5rem',
+                                                                    borderRadius: '6px',
+                                                                    fontFamily: 'Inter, monospace',
+                                                                    fontWeight: '700'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ fontFamily: 'Inter, monospace', fontWeight: '600' }}>
+                                                            {m.cumulativeTarget} hrs
+                                                        </td>
+                                                        <td style={{ fontFamily: 'Inter, monospace', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                                                            {m.cumulativeActual} hrs
+                                                        </td>
+                                                        <td style={{ fontFamily: 'Inter, monospace', fontWeight: '700', fontSize: '1.05rem' }}>
+                                                            <span style={{ color: m.variance >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)' }}>
+                                                                {m.variance >= 0 ? '+' : ''}{m.variance.toFixed(0)} hrs
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {m.variance >= 0 ? (
+                                                                <span className="status-badge status-ahead">Ahead</span>
+                                                            ) : m.variance >= -40 ? (
+                                                                <span className="status-badge status-ontrack">On Track</span>
+                                                            ) : (
+                                                                <span className="status-badge status-behind">Behind</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            <tr style={{ borderTop: '2px solid var(--accent-primary)', fontWeight: '700', background: 'var(--bg-tertiary)' }}>
+                                                <td>YEAR TOTAL</td>
+                                                <td>{totalBillableTarget} hrs</td>
+                                                <td style={{ 
+                                                    fontFamily: 'Inter, monospace',
+                                                    fontSize: '1.1rem',
+                                                    color: 'var(--accent-primary)'
+                                                }}>
+                                                    {totalActualHours} hrs
+                                                </td>
+                                                <td colSpan="2" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                    Annual Progress: {totalBillableTarget > 0 ? ((totalActualHours / totalBillableTarget) * 100).toFixed(1) : 0}%
+                                                </td>
+                                                <td style={{ 
+                                                    fontFamily: 'Inter, monospace',
+                                                    fontSize: '1.2rem',
+                                                    color: overallVariance >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)'
+                                                }}>
+                                                    {overallVariance >= 0 ? '+' : ''}{overallVariance.toFixed(0)} hrs
+                                                </td>
+                                                <td>
+                                                    {overallVariance >= 0 ? (
+                                                        <span className="status-badge status-ahead">Ahead</span>
+                                                    ) : overallVariance >= -40 ? (
+                                                        <span className="status-badge status-ontrack">On Track</span>
+                                                    ) : (
+                                                        <span className="status-badge status-behind">Behind</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <h3 style={{ marginBottom: '1rem', color: 'var(--accent-primary)' }}>Understanding the Glide Slope</h3>
+                                    <div style={{ display: 'grid', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Cumulative Target:</strong> Running total of hours you should have billed by end of this month
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Cumulative Actual:</strong> Running total of hours you've actually billed through this month
+                                        </div>
+                                        <div>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Variance (Glide Slope):</strong> The difference between where you should be and where you are
+                                        </div>
+                                        <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                                            📊 <strong>Tip:</strong> Positive variance (green) means you're ahead of pace. Negative variance (red) means you need to catch up in future months.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <>
+                                {settingsLocked && (
+                                    <div style={{ 
+                                        marginBottom: '2rem', 
+                                        padding: '1.5rem', 
+                                        background: 'rgba(254, 228, 64, 0.15)', 
+                                        border: '2px solid var(--accent-warning)',
+                                        borderRadius: '12px',
+                                        textAlign: 'center'
+                                    }}>
+                                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
+                                        <h3 style={{ color: 'var(--accent-warning)', marginBottom: '0.75rem' }}>Settings Locked</h3>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                                            Annual targets have been set and locked. Contact HR to make changes.
+                                        </p>
+                                        <button 
+                                            className="btn-secondary" 
+                                            onClick={() => setShowUnlockConfirm(true)}
+                                            style={{ padding: '0.75rem 1.5rem' }}
+                                        >
+                                            Unlock Settings (HR Only)
+                                        </button>
+                                    </div>
+                                )}
+
+                                {!settingsLocked && (
+                                    <div style={{ 
+                                        marginBottom: '2rem', 
+                                        padding: '1rem 1.5rem', 
+                                        background: 'rgba(0, 245, 212, 0.1)', 
+                                        border: '1px solid var(--accent-primary)',
+                                        borderRadius: '12px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <div>
+                                            <strong style={{ color: 'var(--accent-primary)' }}>Settings Unlocked</strong>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                                                You can modify annual targets. Lock settings when finalized.
+                                            </p>
+                                        </div>
+                                        <button 
+                                            className="btn" 
+                                            onClick={() => setSettingsLocked(true)}
+                                            style={{ padding: '0.75rem 1.5rem' }}
+                                        >
+                                            🔒 Lock Settings
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div style={{ 
+                                    marginBottom: '2rem', 
+                                    padding: '1rem 1.5rem', 
+                                    background: 'rgba(0, 187, 249, 0.1)', 
+                                    border: '1px solid var(--accent-secondary)',
+                                    borderRadius: '12px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>💾</span>
+                                        <strong style={{ color: 'var(--accent-secondary)' }}>Auto-Save Enabled</strong>
+                                    </div>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        All your data (monthly targets, actual hours, time off entries, and settings) are automatically 
+                                        saved to your browser. You can close this page and return anytime - your data will be preserved.
+                                    </p>
+                                </div>
+
+                                <div className="section" style={{ opacity: settingsLocked ? 0.5 : 1, pointerEvents: settingsLocked ? 'none' : 'auto' }}>
+                                    <div className="section-header">
+                                        <h2>Annual Target Presets</h2>
+                                    </div>
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                            Choose a preset to distribute hours evenly across all 12 months. You can then adjust individual months as needed below.
+                                        </p>
+                                        <div className="stat-label" style={{ marginBottom: '1rem' }}>Quick Presets</div>
+                                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                            <button className="btn btn-secondary" onClick={() => applyPreset('standard')}>
+                                                1,920 hrs (Standard)
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={() => applyPreset('2000')}>
+                                                2,000 hrs
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={() => applyPreset('2100')}>
+                                                2,100 hrs
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={() => applyPreset('2200')}>
+                                                2,200 hrs
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2>Monthly Billable Targets</h2>
+                                    </div>
+                                    
+                                    <div style={{ 
+                                        marginBottom: '2rem', 
+                                        padding: '1.25rem 1.5rem', 
+                                        background: 'rgba(241, 91, 181, 0.15)', 
+                                        border: '2px solid var(--accent-danger)',
+                                        borderRadius: '12px' 
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                                            <strong style={{ color: 'var(--accent-danger)', fontSize: '1.15rem' }}>
+                                                HR APPROVAL REQUIRED
+                                            </strong>
+                                        </div>
+                                        <p style={{ color: 'var(--text-primary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                                            Monthly billable targets should NOT be changed without explicit approval from HR.
+                                        </p>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                                            These targets are set based on your employment agreement, billable hour requirements, 
+                                            and firm policies. Unauthorized changes may result in inaccurate bonus tracking and 
+                                            performance metrics. Contact HR before making any modifications.
+                                        </p>
+                                    </div>
+                                    
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                        Adjust monthly targets only for approved situations such as military leave, maternity/paternity leave, 
+                                        late starts, or other HR-authorized circumstances.
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                                        {monthlyHours.map((m, index) => (
+                                            <div key={index} className="form-group">
+                                                <label>{m.month} Target</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        value={m.required}
+                                                        onChange={(e) => updateMonthlyTarget(index, e.target.value)}
+                                                        min="0"
+                                                        step="1"
+                                                        style={{ flex: 1 }}
+                                                    />
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', minWidth: '40px' }}>hrs</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                        <div className="stat-label">Total Annual from Monthly Targets</div>
+                                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                                            {monthlyHours.reduce((sum, m) => sum + m.required, 0)} hours
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2>When to Adjust Monthly Targets</h2>
+                                    </div>
+                                    <div style={{ display: 'grid', gap: '1rem' }}>
+                                        <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: 'var(--accent-danger)' }}>
+                                                FMLA Leave (Family & Medical Leave Act)
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                For qualifying FMLA leave (up to 12 weeks for family/medical reasons), reduce or zero out affected months. 
+                                                Adjust each month proportionally based on actual leave taken.
+                                                <strong style={{ color: 'var(--accent-danger)', display: 'block', marginTop: '0.5rem' }}>
+                                                    ⚠️ Requires HR approval and proper FMLA documentation.
+                                                </strong>
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: 'var(--accent-secondary)' }}>
+                                                Maternity/Paternity Leave
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                Reduce or zero out the affected months. For 12-week leave spanning 3 months, 
+                                                adjust each month proportionally (e.g., full month = 0 hrs, partial months = reduced).
+                                                <strong style={{ color: 'var(--accent-danger)', display: 'block', marginTop: '0.5rem' }}>
+                                                    Requires HR approval and FMLA/leave documentation.
+                                                </strong>
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: 'var(--accent-primary)' }}>
+                                                Military Leave (2+ weeks)
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                Set the affected month(s) to 0 or reduced hours (e.g., 80 hrs for 2-week absence). 
+                                                Add the leave to your Time Off Schedule with type "Navy" or "Military".
+                                                <strong style={{ color: 'var(--accent-danger)', display: 'block', marginTop: '0.5rem' }}>
+                                                    Requires HR approval and documentation.
+                                                </strong>
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: 'var(--accent-warning)' }}>
+                                                Disability/Medical Leave
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                For short-term or long-term disability leave, reduce targets for affected months proportionally. 
+                                                May be covered under FMLA, ADA, or state disability programs.
+                                                <strong style={{ color: 'var(--accent-danger)', display: 'block', marginTop: '0.5rem' }}>
+                                                    Requires HR approval and medical documentation.
+                                                </strong>
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '0.5rem', color: 'var(--accent-warning)' }}>
+                                                Late Start / Mid-Year Hire
+                                            </div>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                Set months before start date to 0 hours. Adjust the start month proportionally 
+                                                (e.g., started mid-month = 80 hrs instead of 160 hrs).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {showUnlockConfirm && (
+                        <div className="modal" onClick={() => setShowUnlockConfirm(false)}>
+                            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                                <div className="modal-header">
+                                    <h2>Unlock Settings</h2>
+                                    <button className="close-btn" onClick={() => setShowUnlockConfirm(false)}>×</button>
+                                </div>
+                                <div style={{ padding: '1rem 0' }}>
+                                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                                        Settings should only be modified by HR or with HR approval. Annual targets are typically set once at the beginning of the year.
+                                    </p>
+                                    <p style={{ color: 'var(--accent-warning)', fontWeight: '600', marginBottom: '1.5rem' }}>
+                                        ⚠️ Are you authorized to unlock and modify these settings?
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button 
+                                        className="btn" 
+                                        onClick={() => {
+                                            setSettingsLocked(false);
+                                            setShowUnlockConfirm(false);
+                                        }} 
+                                        style={{ flex: 1 }}
+                                    >
+                                        Yes, Unlock Settings
+                                    </button>
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        onClick={() => setShowUnlockConfirm(false)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showModal && (
+                        <div className="modal" onClick={() => setShowModal(false)}>
+                            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-header">
+                                    <h2>{editingEntry ? 'Edit Time Off' : 'Add Time Off'}</h2>
+                                    <button className="close-btn" onClick={() => {
+                                        setShowModal(false);
+                                        setEditingEntry(null);
+                                        setNewEntry({
+                                            startDate: '',
+                                            endDate: '',
+                                            type: 'Vacation',
+                                            reason: '',
+                                            hoursPerDay: 8
+                                        });
+                                    }}>×</button>
+                                </div>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label>Start Date</label>
+                                        <input 
+                                            type="date" 
+                                            value={newEntry.startDate}
+                                            onChange={(e) => setNewEntry({...newEntry, startDate: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>End Date</label>
+                                        <input 
+                                            type="date" 
+                                            value={newEntry.endDate}
+                                            onChange={(e) => setNewEntry({...newEntry, endDate: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label>Type</label>
+                                        <select 
+                                            value={newEntry.type}
+                                            onChange={(e) => setNewEntry({...newEntry, type: e.target.value})}
+                                        >
+                                            <option value="Vacation">Vacation</option>
+                                            <option value="Holiday">Holiday</option>
+                                            <option value="Navy">Navy</option>
+                                            <option value="Sick">Sick Leave</option>
+                                            <option value="Personal">Personal</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Hours per Day</label>
+                                        <input 
+                                            type="number" 
+                                            value={newEntry.hoursPerDay}
+                                            onChange={(e) => setNewEntry({...newEntry, hoursPerDay: parseFloat(e.target.value)})}
+                                            min="0"
+                                            max="24"
+                                            step="0.5"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Reason / Description</label>
+                                    <input 
+                                        type="text" 
+                                        value={newEntry.reason}
+                                        onChange={(e) => setNewEntry({...newEntry, reason: e.target.value})}
+                                        placeholder="e.g., Family vacation, Christmas holiday"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                                    <button className="btn" onClick={addTimeOffEntry} style={{ flex: 1 }}>
+                                        {editingEntry ? 'Update Entry' : 'Add Entry'}
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => {
+                                        setShowModal(false);
+                                        setEditingEntry(null);
+                                        setNewEntry({
+                                            startDate: '',
+                                            endDate: '',
+                                            type: 'Vacation',
+                                            reason: '',
+                                            hoursPerDay: 8
+                                        });
+                                    }}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PTOPlanner />, document.getElementById('root'));
+    </script>
+
+    <script>
+      // Register service worker for offline-ish support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+        });
+      }
+    </script>
+
+</body>
+</html>
