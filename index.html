@@ -542,7 +542,10 @@
             const [annualTarget, setAnnualTarget] = useState(1920);
             const [showModal, setShowModal] = useState(false);
             const [showTargetModal, setShowTargetModal] = useState(false);
-            const [activeTab, setActiveTab] = useState('dashboard');
+            const [activeTab, setActiveTab] = useState(() => {
+                const saved = localStorage.getItem('activeTab');
+                return saved || 'dashboard';
+            });
             const [editingEntry, setEditingEntry] = useState(null);
             const [settingsLocked, setSettingsLocked] = useState(() => {
                 const saved = localStorage.getItem('settingsLocked');
@@ -648,6 +651,36 @@
                 return totalHours;
             };
 
+            const getWorkingDaysBetween = (startDate, endDate) => {
+                let workingDays = 0;
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dayOfWeek = d.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        workingDays++;
+                    }
+                }
+                return workingDays;
+            };
+
+            const getTimeOffHoursInRange = (startDate, endDate) => {
+                let totalHours = 0;
+                timeOffEntries.forEach(entry => {
+                    const start = new Date(entry.startDate);
+                    const end = new Date(entry.endDate);
+
+                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                        const dayOfWeek = d.getDay();
+                        if (dayOfWeek === 0 || dayOfWeek === 6) {
+                            continue;
+                        }
+                        if (d >= startDate && d <= endDate) {
+                            totalHours += entry.hoursPerDay;
+                        }
+                    }
+                });
+                return totalHours;
+            };
+
             useEffect(() => {
                 const data = monthlyHours.map((m, index) => {
                     const workingDays = getWorkingDays(currentYear, index);
@@ -697,8 +730,14 @@
             useEffect(() => {
                 if (activePlan) {
                     localStorage.setItem('activePlan', JSON.stringify(activePlan));
+                } else {
+                    localStorage.removeItem('activePlan');
                 }
             }, [activePlan]);
+
+            useEffect(() => {
+                localStorage.setItem('activeTab', activeTab);
+            }, [activeTab]);
 
             const totalBillableTarget = monthlyData.reduce((sum, m) => sum + m.billableTarget, 0);
             const totalActualHours = monthlyData.reduce((sum, m) => sum + m.actualHours, 0);
@@ -708,6 +747,25 @@
                 ? monthlyData.reduce((sum, m) => sum + m.dailyPace, 0) / monthlyData.length 
                 : 0;
             const overallVariance = totalActualHours - totalBillableTarget;
+
+            const today = new Date();
+            const isCurrentYear = today.getFullYear() === currentYear;
+            const dashboardMonthIndex = isCurrentYear ? today.getMonth() : 0;
+            const dashboardDay = isCurrentYear ? today.getDate() : 1;
+            const dashboardStart = new Date(currentYear, dashboardMonthIndex, dashboardDay);
+            const dashboardEnd = new Date(currentYear, dashboardMonthIndex + 1, 0);
+            const remainingWorkingDays = getWorkingDaysBetween(dashboardStart, dashboardEnd);
+            const remainingTimeOffHours = getTimeOffHoursInRange(dashboardStart, dashboardEnd);
+            const remainingWorkDays = Math.max((remainingWorkingDays * 8 - remainingTimeOffHours) / 8, 0);
+            const currentMonthTarget = monthlyData[dashboardMonthIndex]?.billableTarget || 0;
+            const currentMonthActual = monthlyHours[dashboardMonthIndex]?.actual || 0;
+            const remainingHoursNeeded = Math.max(currentMonthTarget - currentMonthActual, 0);
+            const currentMonthDailyPace = remainingWorkDays > 0 ? remainingHoursNeeded / remainingWorkDays : 0;
+            const currentMonthWeekendHours = currentMonthDailyPace > 8.6
+                ? (currentMonthDailyPace - 8.6) * remainingWorkDays
+                : 0;
+            const currentMonthName = monthlyHours[dashboardMonthIndex]?.month || 'Current';
+            const currentMonthPaceStatus = currentMonthDailyPace <= 8.6 ? 'On Track' : 'Weekend Likely';
             
             // Bonus calculations
             // Bonus calculation - prorated based on annual target
@@ -1052,6 +1110,26 @@
                                 })()}
 
                                 <div className="stats-grid">
+                                    <div className="stat-card">
+                                        <div className="stat-label">{currentMonthName} Remaining Pace</div>
+                                        <div className="stat-value">
+                                            {currentMonthDailyPace.toFixed(1)}
+                                            <span className="stat-unit">hrs/day</span>
+                                        </div>
+                                        <div className="stat-meta">
+                                            <div style={{ fontWeight: '700', color: currentMonthDailyPace <= 8.6 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                                                {currentMonthPaceStatus}
+                                            </div>
+                                            <div style={{ marginTop: '0.35rem' }}>
+                                                {remainingHoursNeeded.toFixed(0)} hrs left over {remainingWorkDays.toFixed(1)} workdays
+                                            </div>
+                                            {currentMonthWeekendHours > 0 && (
+                                                <div style={{ marginTop: '0.35rem', color: 'var(--accent-danger)', fontWeight: '600' }}>
+                                                    ≈ {currentMonthWeekendHours.toFixed(1)} weekend hrs needed
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                     <div className="stat-card">
                                         <div className="stat-label">Minimum Target (1920)</div>
                                         <div className="stat-value">
